@@ -1,7 +1,10 @@
+from django.contrib.auth import authenticate, login
 from django.http import HttpRequest
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 from .json_rpc_api import api
 from .models import Book
-from .serializers import BookSerializer
+from .serializers import BookSerializer, UserSerializer
 
 
 @api.dispatcher.add_method(name='utils.sum')
@@ -11,9 +14,18 @@ def _sum(request, *args, **kwargs):
 
 @api.dispatcher.add_class
 class Users:
+    def login(self, request, username, password):
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            token = TokenObtainPairSerializer().get_token(user)
+            data = {"refresh": str(token), "access": str(token.access_token)}
+            return data
+        return {'error': '401', 'message': 'Not authenticated'}
+
     def me(self, request, *args, **kwargs):
         if request.user.is_authenticated:
-            return request.user
+            return UserSerializer(request.user).data
         return {'error': '401', 'message': 'Not authenticated'}
 
 

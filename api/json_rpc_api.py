@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+from django.contrib.auth import login
+from django.contrib.auth.models import User
 from django.core import serializers
 from django.db import models
 from django.forms import model_to_dict
@@ -18,6 +20,7 @@ from jsonrpc.manager import JSONRPCResponseManager
 from jsonrpc.utils import DatetimeDecimalEncoder
 from jsonrpc.dispatcher import Dispatcher
 from rest_framework.viewsets import ModelViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +69,12 @@ class JSONRPCAPI(object):
                 jsonrpc_request.params.insert(0, request)
 
             t1 = time.time()
+            try:
+                user, token = JWTAuthentication().authenticate(request)
+                if isinstance(user, User) and user.is_active:
+                    login(request, user)
+            except Exception as e:
+                print(e)
             response = JSONRPCResponseManager.handle_request(
                 jsonrpc_request, self.dispatcher)
             t2 = time.time()
